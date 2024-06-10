@@ -20,6 +20,11 @@ void task_read_temp_humidity(void *pvParameter)
         // Send the temperature and humidity to the buffer
         xQueueSend(buffer, &data, 0);
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        for(int i = 30; i > 0; i--) {
+            printf("\rWaiting for the next sensor data acquisition in %d seconds", i);
+            fflush(stdout);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
+        printf("\n");
     }
 }
