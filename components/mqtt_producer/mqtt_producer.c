@@ -128,8 +128,8 @@ esp_err_t mqtt_start(void)
 
 void mqtt_send_message(TempHumidity temp_humidity)
 {
-    char message[100];
-    snprintf(message, sizeof(message), "{\"temperature\": %.2f, \"humidity\": %.2f}", temp_humidity.temperature, temp_humidity.humidity);
-    esp_mqtt_client_publish(client, "/liwaisi/temperature", message, 0, 1, 0);
+    char* json_string = convert_to_json_string(&temp_humidity);
+    ESP_LOGI(TAG, "Sending message: %s", json_string);
+    esp_mqtt_client_publish(client, CONFIG_MQTT_TOPIC, json_string, 0, 1, 0);
 
 }

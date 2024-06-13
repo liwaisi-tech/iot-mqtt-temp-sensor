@@ -17,7 +17,6 @@ void task_receive_queue_message(void *pvParameter)
 
         // Print the temperature and humidity
         fflush(stdout);
-        printf("Temperature: %.1f C, Humidity: %.1f %%\n", data.temperature, data.humidity);
 
         // Send the temperature and humidity to the MQTT broker
         mqtt_send_message(data);
