@@ -30,8 +30,9 @@
 #include "mqtt_client.h"
 
 #include <temp_humidity.h>
+#include <esp_mac.h>
 
-static const char *TAG = "mqtt_sensor_dht22";
+static const char *TAG = "mqtt_producer";
 esp_mqtt_client_handle_t client;
 
 
@@ -56,8 +57,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
     esp_mqtt_event_handle_t event = event_data;
-    esp_mqtt_client_handle_t client = event->client;
-    int msg_id;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
@@ -76,8 +75,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        printf("DATA=%.*s\r\n", event->data_len, event->data);
+        ESP_LOGI(TAG, "TOPIC=%.*s", event->topic_len, event->topic);
+        ESP_LOGI(TAG, "DATA=%.*s", event->data_len, event->data);
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -126,10 +125,21 @@ esp_err_t mqtt_start(void)
     return ESP_OK;
 }
 
-void mqtt_send_message(TempHumidity temp_humidity)
-{
-    char* json_string = convert_to_json_string(&temp_humidity);
-    ESP_LOGI(TAG, "Sending message: %s", json_string);
-    esp_mqtt_client_publish(client, CONFIG_MQTT_TOPIC, json_string, 0, 1, 0);
+char* get_mac_address_string(uint8_t mac[6]) {
+    static char mac_str[18];
+    sprintf(mac_str, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return mac_str;
+}
 
+void mqtt_send_message(TempHumidity* temp_humidity)
+{
+    ESP_LOGD(TAG, "Init sending message");
+    char payload[80];
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    char mac_str[18];
+    snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    snprintf(payload, sizeof(payload), "{\"temperature\":%f,\"humidity\":%f,\"mac\":\"%s\"}", temp_humidity->temperature, temp_humidity->humidity, mac_str);
+    ESP_LOGD(TAG, "Sending message %s", payload);
+    esp_mqtt_client_publish(client, CONFIG_MQTT_TOPIC, payload, strlen(payload), 1, 0);
 }
