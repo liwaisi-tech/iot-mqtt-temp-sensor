@@ -2,24 +2,38 @@
 #include <time.h>
 #include <sys/time.h>
 #include "esp_log.h"
-#include <wifi.h>
 #include "nvs_flash.h"
 #include "soc/soc_caps.h"
 #include "esp_sleep.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/rtc_io.h"
-#include <temp_humidity_reader.h>
-#include "temp_humidity.h"
+#include "workflow.h"
 
 static const char *TAG = "main";
 
+static const char *HEADER =
+"#                                     #######                      \n"
+"#       # #    #   ##   #  ####  #       #    ######  ####  #    # \n"
+"#       # #    #  #  #  # #      #       #    #      #    # #    # \n"
+"#       # #    # #    # #  ####  #       #    #####  #      ###### \n"
+"#       # # ## # ###### #      # #       #    #      #      #    # \n"
+"#       # ##  ## #    # # #    # #       #    #      #    # #    # \n"
+"####### # #    # #    # #  ####  #       #    ######  ####  #    # \n"
+"                                                                   \n"
+"                           ###        #######                      \n"
+"                            #   ####     #                         \n"
+"                            #  #    #    #                         \n"
+"                            #  #    #    #                         \n"
+"                            #  #    #    #                         \n"
+"                            #  #    #    #                         \n"
+"                           ###  ####     #                         \n"
+"                                                                   \n";
+
 #if SOC_RTC_FAST_MEM_SUPPORTED
 static RTC_DATA_ATTR struct timeval sleep_enter_time;
-static RTC_DATA_ATTR struct TempHumidity last_temp_humidity;
 #else
 static struct timeval sleep_enter_time;
-static struct TempHumidity last_temp_humidity;
 #endif
 static void init_nvs(void){
     esp_err_t ret = nvs_flash_init();
@@ -59,10 +73,7 @@ static void deep_sleep_task(void *args)
     switch (esp_sleep_get_wakeup_cause()) {
         case ESP_SLEEP_WAKEUP_TIMER: {
             ESP_LOGI(TAG, "Wake up from timer. Time spent in deep sleep: %dms", sleep_time_ms);
-            TempHumidity data;
-            read_temp_humidity(&data);
-            ESP_LOGI(TAG, "Temperature: %f, Humidity: %f", data.temperature, data.humidity);
-            ESP_ERROR_CHECK(wifi_init_sta());
+            ESP_ERROR_CHECK(run_temp_humidity_workflow());
             break;
         }
         case ESP_SLEEP_WAKEUP_UNDEFINED:
@@ -101,7 +112,7 @@ static void deep_sleep_task(void *args)
 
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
-    const int wakeup_time_sec = 20;
+    const int wakeup_time_sec = 25;
     ESP_LOGI(TAG, "Enabling timer wakeup, %ds", wakeup_time_sec);
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000));
 }
@@ -109,6 +120,7 @@ static void deep_sleep_register_rtc_timer_wakeup(void)
 void app_main(void)
 {
     deep_sleep_register_rtc_timer_wakeup();
-    ESP_LOGI(TAG, "Hello World!");
+    printf(HEADER);
+    printf("\n");
     xTaskCreate(deep_sleep_task, "deep_sleep_task", 4096, NULL, 6, NULL);
 }
