@@ -1,3 +1,0 @@
-idf_component_register(SRCS "mqtt_producer.c"
-                    INCLUDE_DIRS "include"
-                    PRIV_REQUIRES "esp_wifi" "nvs_flash" "mqtt" "temp_humidity")
